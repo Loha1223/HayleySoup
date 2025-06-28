@@ -13,7 +13,7 @@
     <!-- Visualization & Content Choices: 
         - LocalStorage Persistence: Goal: Persist Data -> Method: JSON.stringify to save the main data object to localStorage on edit/add actions, and JSON.parse to load on initial startup -> Justification: The key feature to make user edits durable across sessions.
         - Editable Elements: Goal: Edit -> Method: JS toggling of `contenteditable` attribute on a per-card basis -> Interaction: Card-specific 'Edit' button activates the mode -> Justification: Prevents accidental edits.
-        - Dynamic DOM Manipulation: Goal: Add/Delete -> Method: JS functions to create/remove dialogue nodes (visible only in edit mode), which are then saved to the main data object. -> Justification: Intuitive script structure modification.
+        - Dynamic DOM Manipulation: Goal: Add/Delete -> Method: JS functions to create/remove dialogue item nodes (visible only in edit mode), which are then saved to the main data object. -> Justification: Intuitive script structure modification.
     -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
@@ -61,6 +61,8 @@
         .gemini-btn:hover, .edit-btn-main:hover {
             background-color: #D57A66;
         }
+        .edit-btn { background-color: #60A5FA; color: white; }
+        .edit-btn:hover { background-color: #3B82F6; }
         .save-btn { background-color: #4ADE80; color: white; }
         .save-btn:hover { background-color: #22C55E; }
         .cancel-btn { background-color: #FBBF24; color: white; }
@@ -174,6 +176,7 @@
                 }
             };
             
+
             function createDialogueHTML(dialogueArray, isEditing) {
                 let html = '<div class="dialogue-list space-y-4">';
                 (dialogueArray || []).forEach((item, index) => {
@@ -212,7 +215,7 @@
                                 <div class="loader hidden"></div>
                             </div>
                             <div class="card-view-controls">
-                                <button data-action="edit" class="edit-btn-main flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm">✏️ 編輯</button>
+                                <button data-action="edit" class="edit-btn flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm">✏️ 編輯</button>
                             </div>
                             <div class="card-edit-controls items-center gap-4">
                                <button data-action="save" data-week="${week}" data-day="${day}" class="save-btn flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm">✅ 完成儲存</button>
@@ -239,11 +242,16 @@
                 const dialogueItems = card.querySelectorAll('.dialogue-item');
                 const newDialogue = [];
                 dialogueItems.forEach(item => {
-                    const speaker = item.querySelector('.speaker-name').textContent;
-                    const line = item.querySelector('.line-content').textContent;
-                    const scene = item.querySelector('.scene-content').textContent;
-                    const camera = item.querySelector('.camera-content').textContent;
-                    newDialogue.push({ speaker, line, scene, camera });
+                    const speakerEl = item.querySelector('.speaker-name');
+                    const lineEl = item.querySelector('.line-content');
+                    const sceneEl = item.querySelector('.scene-content');
+                    const cameraEl = item.querySelector('.camera-content');
+                    newDialogue.push({
+                        speaker: speakerEl ? speakerEl.textContent.trim() : '',
+                        line: lineEl ? lineEl.textContent.trim() : '',
+                        scene: sceneEl ? sceneEl.textContent.trim() : '',
+                        camera: cameraEl ? cameraEl.textContent.trim() : ''
+                    });
                 });
                 scriptsData[week].days[day] = { title, dialogue: newDialogue };
                 localStorage.setItem('hayleyScriptsData', JSON.stringify(scriptsData));
@@ -379,10 +387,13 @@
                 if (!button) return;
 
                 const card = button.closest('.day-content');
+                if (!card) return;
+                
                 const week = card.id.split('-')[0];
                 const day = card.id.split('-')[1];
+                const action = button.dataset.action;
 
-                switch (button.dataset.action) {
+                switch (action) {
                     case 'edit': setCardEditState(card, true); break;
                     case 'save': saveCardChanges(card, week, day); break;
                     case 'cancel': cancelCardChanges(card, week, day); break;
@@ -395,8 +406,8 @@
                             <div class="flex-1">
                                 <p class="font-semibold text-gray-800 editable-content" contenteditable="true"><span class="speaker-name">新講者</span>: <span class="line-content">新增對白</span></p>
                                 <div class="mt-2 text-sm text-gray-500">
-                                    <p class="editable-content" contenteditable="true"><span class="font-semibold">畫面：</span> </p>
-                                    <p class="editable-content" contenteditable="true"><span class="font-semibold">鏡位：</span> </p>
+                                    <p class="editable-content" contenteditable="true"><span class="font-semibold">畫面：</span> <span class="scene-content"> </span></p>
+                                    <p class="editable-content" contenteditable="true"><span class="font-semibold">鏡位：</span> <span class="camera-content"> </span></p>
                                 </div>
                             </div>
                             <button data-action="delete-dialogue" class="delete-btn rounded-full w-6 h-6 flex-shrink-0 items-center justify-center text-xs font-bold edit-controls">-</button>`;
